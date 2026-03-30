@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAFE-TEXT · Gestionnaire de secrets</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a0c15 0%, #141b2b 50%, #0f1322 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            position: relative;
+        }
+
+        /* Effet de grain subtil */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header avec effet glassmorphism */
+        .dashboard {
+            background: rgba(18, 25, 45, 0.75);
+            backdrop-filter: blur(20px);
+            border-radius: 2rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(72, 120, 184, 0.2);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .dashboard:hover {
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6);
+        }
+
+        .dashboard h2 {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #e8f0ff 0%, #9bb9e6 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 2rem;
+            letter-spacing: -0.5px;
+        }
+
+        .dashboard h2 i {
+            background: linear-gradient(135deg, #4f9eff, #7c6eff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-size: 2rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #b4c6f0;
+            font-weight: 500;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.75rem;
+        }
+
+        label i {
+            font-size: 0.9rem;
+            color: #5d8bda;
+        }
+
+        textarea, input[type="password"] {
+            width: 100%;
+            background: rgba(12, 18, 30, 0.8);
+            border: 2px solid rgba(72, 120, 184, 0.3);
+            border-radius: 1rem;
+            padding: 1rem 1.25rem;
+            color: #f0f4ff;
+            font-size: 0.95rem;
+            font-family: 'Inter', monospace;
+            transition: all 0.2s ease;
+            resize: vertical;
+        }
+
+        textarea:focus, input:focus {
+            outline: none;
+            border-color: #5d8bda;
+            box-shadow: 0 0 0 3px rgba(93, 139, 218, 0.2);
+            background: rgba(18, 26, 42, 0.9);
+        }
+
+        textarea::placeholder, input::placeholder {
+            color: rgba(180, 198, 240, 0.4);
+        }
+
+        /* Barre de force améliorée */
+        .strength-bar {
+            height: 6px;
+            background: rgba(45, 55, 80, 0.5);
+            border-radius: 10px;
+            margin-top: 0.75rem;
+            overflow: hidden;
+        }
+
+        .strength-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 10px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .hint {
+            display: block;
+            font-size: 0.7rem;
+            color: #7e8eb0;
+            margin-top: 0.5rem;
+            text-align: right;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background: linear-gradient(135deg, #2c5a8c, #1e3a5f);
+            border: none;
+            padding: 1rem;
+            border-radius: 1rem;
+            font-weight: 600;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(44, 90, 140, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        /* Section archives */
+        .archives {
+            background: rgba(12, 18, 30, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 2rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(72, 120, 184, 0.2);
+        }
+
+        .archives h3 {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #cbdaf5;
+            font-weight: 500;
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.3px;
+        }
+
+        .archives h3 i {
+            color: #5d8bda;
+        }
+
+        .vault-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* Cartes améliorées */
+        .vault-list li {
+            background: linear-gradient(135deg, rgba(26, 35, 55, 0.9), rgba(20, 28, 45, 0.9));
+            border-radius: 1.25rem;
+            padding: 1.25rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(72, 120, 184, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .vault-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: linear-gradient(180deg, #5d8bda, #7c6eff);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .vault-list li:hover::before {
+            opacity: 1;
+        }
+
+        .vault-list li:hover {
+            transform: translateX(4px);
+            border-color: rgba(93, 139, 218, 0.4);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .vault-list li .lock-icon {
+            font-size: 1.2rem;
+            color: #5d8bda;
+            transition: all 0.3s ease;
+        }
+
+        .secret-text {
+            flex: 1;
+            font-family: 'SF Mono', 'Courier New', monospace;
+            font-size: 0.85rem;
+            background: rgba(8, 12, 22, 0.6);
+            padding: 0.6rem 1rem;
+            border-radius: 0.75rem;
+            color: #b3e0b0;
+            word-break: break-all;
+            border: 1px solid rgba(93, 139, 218, 0.2);
+        }
+
+        .timestamp {
+            font-size: 0.7rem;
+            color: #8a9bc0;
+            background: rgba(45, 55, 80, 0.5);
+            padding: 0.4rem 0.8rem;
+            border-radius: 2rem;
+            white-space: nowrap;
+            font-family: monospace;
+        }
+
+        .btn-delete {
+            background: rgba(139, 69, 107, 0.3);
+            border: 1px solid rgba(219, 112, 147, 0.3);
+            color: #ffb6c1;
+            padding: 0.6rem 1.2rem;
+            border-radius: 2rem;
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-delete:hover {
+            background: rgba(219, 112, 147, 0.5);
+            border-color: #db7093;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        /* Mode flou */
+        .blur-mode .secret-text {
+            filter: blur(6px);
+            user-select: none;
+            background: rgba(30, 40, 60, 0.8);
+        }
+
+        /* Footer indicateurs */
+        .indicators {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(12, 18, 30, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 0.75rem 1.5rem;
+            border-radius: 3rem;
+            border: 1px solid rgba(72, 120, 184, 0.2);
+        }
+
+        .resolution-info {
+            font-size: 0.8rem;
+            color: #9aafd0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .scroll-top {
+            background: rgba(45, 75, 115, 0.6);
+            border: 1px solid rgba(93, 139, 218, 0.4);
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .scroll-top.visible {
+            opacity: 1;
+        }
+
+        .scroll-top:hover {
+            background: rgba(93, 139, 218, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(93, 139, 218, 0.3);
+        }
+
+        /* Toast message */
+        .toast-message {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(30, 40, 60, 0.95);
+            backdrop-filter: blur(12px);
+            color: #e8f0ff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 3rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+            border-left: 3px solid #5d8bda;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            pointer-events: none;
+            z-index: 1000;
+            white-space: nowrap;
+        }
+
+        .toast-message.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Animation d'entrée pour les cartes */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .vault-list li {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            .dashboard, .archives {
+                padding: 1.5rem;
+            }
+            
+            .vault-list li {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .timestamp {
+                text-align: center;
+            }
+            
+            .btn-delete {
+                justify-content: center;
+            }
+            
+            .toast-message {
+                white-space: normal;
+                text-align: center;
+                max-width: 90%;
+            }
+        }
+
+        /* Scrollbar personnalisée */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(18, 25, 45, 0.5);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #2c5a8c, #1e3a5f);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3e6a9e;
+        }
+
+        /* Badge pour le nombre de secrets */
+        .archives h3 .badge {
+            background: rgba(93, 139, 218, 0.3);
+            padding: 0.2rem 0.6rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        /* Animation pour la barre de force */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- ZONE DE SAISIE -->
+        <header class="dashboard">
+            <h2>
+                <i class="fas fa-shield-alt"></i>
+                SAFE·TEXT
+                <span style="font-size: 0.8rem; background: rgba(93,139,218,0.2); padding: 0.2rem 0.6rem; border-radius: 2rem;">v2.0</span>
+            </h2>
+            <div class="input-group">
+                <label><i class="fas fa-envelope"></i> Message secret</label>
+                <textarea id="secretInput" placeholder="Saisissez votre message confidentiel ici..." rows="3"></textarea>
+            </div>
+            <div class="input-group">
+                <label><i class="fas fa-key"></i> Clé de chiffrement</label>
+                <input type="password" id="cipherKey" placeholder="Minimum 6 caractères">
+                <div class="strength-bar">
+                    <div class="strength-fill" id="strengthFill"></div>
+                </div>
+                <span class="hint"><i class="fas fa-info-circle"></i> Échap: réinitialiser · Maj+S: brouiller</span>
+            </div>
+            <form id="secretForm">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-lock"></i>
+                    Chiffrer & enregistrer
+                </button>
+            </form>
+        </header>
+
+        <!-- ZONE DE LISTE -->
+        <main class="archives">
+            <h3>
+                <i class="fas fa-archive"></i>
+                Archives sécurisées
+                <span class="badge" id="secretsCount">0</span>
+            </h3>
+            <ul id="vaultList" class="vault-list">
+                <!-- Les éléments seront injectés dynamiquement -->
+            </ul>
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="indicators">
+            <div class="resolution-info">
+                <i class="fas fa-desktop"></i>
+                <span id="widthSpan"></span> × <span id="heightSpan"></span>
+            </div>
+            <button id="scrollTopBtn" class="scroll-top" title="Revenir en haut">
+                <i class="fas fa-arrow-up"></i>
+            </button>
+        </footer>
+    </div>
+
+    <!-- TOAST -->
+    <div id="panicToast" class="toast-message">
+        <i class="fas fa-check-circle"></i> Cleared ✨
+    </div>
+
+    <script>
+        // ==================== STOCKAGE LOCAL ====================
+        let secrets = [];
+
+        function loadSecrets() {
+            const stored = localStorage.getItem('safe_text_secrets');
+            if (stored) {
+                secrets = JSON.parse(stored);
+            } else {
+                secrets = [];
+            }
+            renderVault();
+        }
+
+        function saveSecrets() {
+            localStorage.setItem('safe_text_secrets', JSON.stringify(secrets));
+            renderVault();
+        }
+
+        // ==================== CHIFFREMENT SIMPLE (BASE64) ====================
+        function encrypt(text, key) {
+            if (!key || key.length < 6) return null;
+            let combined = text + key;
+            let encrypted = btoa(combined);
+            return encrypted;
+        }
+
+        function decrypt(encrypted, key) {
+            if (!key || key.length < 6) return null;
+            try {
+                let decoded = atob(encrypted);
+                if (decoded.endsWith(key)) {
+                    return decoded.slice(0, -key.length);
+                }
+                return null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // ==================== RENDU DE LA LISTE ====================
+        function renderVault() {
+            const vaultList = document.getElementById('vaultList');
+            const countSpan = document.getElementById('secretsCount');
+            
+            if (!vaultList) return;
+            
+            if (secrets.length === 0) {
+                vaultList.innerHTML = '<li style="justify-content: center; opacity: 0.7;"><i class="fas fa-lock-open"></i> Aucun secret enregistré</li>';
+                if (countSpan) countSpan.textContent = '0';
+                return;
+            }
+            
+            if (countSpan) countSpan.textContent = secrets.length;
+            
+            vaultList.innerHTML = secrets.map((secret, index) => {
+                const date = new Date(secret.timestamp);
+                const formattedDate = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+                return `
+                    <li data-id="${secret.id}">
+                        <i class="fas fa-lock lock-icon"></i>
+                        <span class="secret-text">${escapeHtml(secret.encryptedData)}</span>
+                        <span class="timestamp"><i class="far fa-clock"></i> ${formattedDate}</span>
+                        <button class="btn-delete" data-id="${secret.id}">
+                            <i class="fas fa-trash-alt"></i> Supprimer
+                        </button>
+                    </li>
+                `;
+            }).join('');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // ==================== AJOUTER UN SECRET ====================
+        function addSecret(message, key) {
+            if (!message || !message.trim()) {
+                showToast('✏️ Message requis', 'warning');
+                return false;
+            }
+            if (!key || key.length < 6) {
+                showToast('🔑 Clé d\'au moins 6 caractères', 'warning');
+                return false;
+            }
+            
+            const encrypted = encrypt(message, key);
+            if (!encrypted) {
+                showToast('❌ Erreur de chiffrement', 'error');
+                return false;
+            }
+            
+            const newSecret = {
+                id: Date.now(),
+                encryptedData: encrypted,
+                timestamp: Date.now()
+            };
+            
+            secrets.unshift(newSecret);
+            saveSecrets();
+            showToast('✓ Secret enregistré avec succès', 'success');
+            return true;
+        }
+
+        // ==================== SUPPRIMER UN SECRET ====================
+        function deleteSecret(id) {
+            secrets = secrets.filter(s => s.id != id);
+            saveSecrets();
+            showToast('🗑️ Secret supprimé', 'info');
+        }
+
+        // ==================== TOAST NOTIFICATION ====================
+        let toastTimeout;
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('panicToast');
+            if (!toast) return;
+            
+            const icons = {
+                success: '✓',
+                warning: '⚠️',
+                error: '❌',
+                info: 'ℹ️'
+            };
+            
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i> ${message}`;
+            toast.classList.add('show');
+            
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        }
+
+        // ==================== INDICATEUR DE FORCE ====================
+        function updateStrengthBar(key) {
+            const fill = document.getElementById('strengthFill');
+            if (!fill) return;
+            
+            let strength = 0;
+            if (key.length >= 6) strength += 25;
+            if (key.length >= 10) strength += 25;
+            if (/[A-Z]/.test(key)) strength += 20;
+            if (/[0-9]/.test(key)) strength += 15;
+            if (/[^a-zA-Z0-9]/.test(key)) strength += 15;
+            
+            strength = Math.min(100, strength);
+            fill.style.width = strength + '%';
+            
+            if (strength < 30) {
+                fill.style.background = '#dc3545';
+            } else if (strength < 60) {
+                fill.style.background = '#ffc107';
+            } else {
+                fill.style.background = '#28a745';
+            }
+        }
+
+        // ==================== AFFICHAGE RÉSOLUTION ====================
+        function updateResolution() {
+            const widthSpan = document.getElementById('widthSpan');
+            const heightSpan = document.getElementById('heightSpan');
+            if (widthSpan && heightSpan) {
+                widthSpan.textContent = window.innerWidth;
+                heightSpan.textContent = window.innerHeight;
+            }
+        }
+
+        // ==================== GESTION SCROLL ====================
+        function handleScroll() {
+            const btn = document.getElementById('scrollTopBtn');
+            if (btn) {
+                if (window.scrollY > 200) {
+                    btn.classList.add('visible');
+                } else {
+                    btn.classList.remove('visible');
+                }
+            }
+        }
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ==================== PANIC MODE (Shift+S) ====================
+        let blurEnabled = false;
+        function toggleBlurMode() {
+            blurEnabled = !blurEnabled;
+            if (blurEnabled) {
+                document.body.classList.add('blur-mode');
+                showToast('🔒 Mode brouillard activé', 'info');
+            } else {
+                document.body.classList.remove('blur-mode');
+                showToast('👁️ Mode normal', 'info');
+            }
+        }
+
+        // ==================== RÉINITIALISATION (Echap) ====================
+        function resetForm() {
+            document.getElementById('secretInput').value = '';
+            document.getElementById('cipherKey').value = '';
+            updateStrengthBar('');
+            showToast('🔄 Formulaire réinitialisé', 'info');
+        }
+
+        // ==================== GESTION DES ÉVÉNEMENTS ====================
+        function setupEventListeners() {
+            // Formulaire d'ajout
+            const form = document.getElementById('secretForm');
+            if (form) {
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const message = document.getElementById('secretInput').value;
+                    const key = document.getElementById('cipherKey').value;
+                    if (addSecret(message, key)) {
+                        document.getElementById('secretInput').value = '';
+                        document.getElementById('cipherKey').value = '';
+                        updateStrengthBar('');
+                    }
+                });
+            }
+            
+            // Délégation pour les boutons supprimer
+            const vaultList = document.getElementById('vaultList');
+            if (vaultList) {
+                vaultList.addEventListener('click', (e) => {
+                    const deleteBtn = e.target.closest('.btn-delete');
+                    if (deleteBtn) {
+                        const id = parseInt(deleteBtn.getAttribute('data-id'));
+                        if (id) deleteSecret(id);
+                    }
+                });
+            }
+            
+            // Indicateur de force
+            const keyInput = document.getElementById('cipherKey');
+            if (keyInput) {
+                keyInput.addEventListener('input', (e) => updateStrengthBar(e.target.value));
+            }
+            
+            // Scroll
+            window.addEventListener('scroll', handleScroll);
+            const scrollBtn = document.getElementById('scrollTopBtn');
+            if (scrollBtn) scrollBtn.addEventListener('click', scrollToTop);
+            
+            // Résolution
+            window.addEventListener('resize', updateResolution);
+            updateResolution();
+            
+            // Raccourcis clavier
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    resetForm();
+                } else if (e.shiftKey && e.key === 'S') {
+                    e.preventDefault();
+                    toggleBlurMode();
+                }
+            });
+            
+            // Protection contextmenu sur les secrets
+            if (vaultList) {
+                vaultList.addEventListener('contextmenu', (e) => {
+                    if (e.target.closest('.secret-text')) {
+                        e.preventDefault();
+                        showToast('🔒 Protection anti-copie', 'warning');
+                        return false;
+                    }
+                });
+            }
+        }
+
+        // ==================== INITIALISATION ====================
+        function init() {
+            loadSecrets();
+            setupEventListeners();
+            updateStrengthBar('');
+        }
+        
+        init();
+    </script>
+</body>
+</html>
